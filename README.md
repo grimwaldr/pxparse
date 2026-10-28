@@ -6,7 +6,7 @@ A damage parser for Phoenix XI, an Ashita v4 addon. It counts what your party do
 
 ## Disclaimer
 
-pxparse is for tracking your own damage and improving your own play. It isn't a tool for harassing, bullying or putting down other players. Everyone's still learning their job, their gear and the fights, so if you share numbers, use them to help each other get better.
+pxparse is for tracking your own damage and improving your own play. It isn't a tool for harassing, bullying or putting down other players.
 
 ## Install
 

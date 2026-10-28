@@ -46,7 +46,7 @@ If the window is too narrow for everything (a wide font, a small scale), the foo
 | Skin | Look |
 |---|---|
 | Phoenix | Dark red and ember. The starting skin. |
-| Classic | The game's own window art and font. |
+| Classic | The game's own window art and font, with rows drawn like the game's lists: text on the window and a thin gauge underneath. |
 | Default | Plain ImGui. |
 
 Classic reads the window art from your own game install (`ROM/0/14.DAT` to `21.DAT`) and follows Config > Windows > Shared > Window Type as you change it, or you can pin one type in Settings or with `/pxp wintype`. The picture above shows Window Type 4.
@@ -174,6 +174,8 @@ Or with LuaJIT: `luajit tests/run.lua`.
 **The chain timer shows what it can't know.** The client is told the chain number, not the mob's difficulty, so a plain kill might have started a chain or might not. The timer shows that window in grey rather than guessing, and turns coloured once the server confirms a chain.
 
 **The window stays small and steady.** The meter alone covers most of a fight, so everything else sits behind the gear. Footer figures update once a second and keep their place on the line, so a number ticking over doesn't shake the line, and each item has a priority so the least useful ones are left out before anything overlaps. Ashita's font, scale and players' names vary, and a fixed layout that fits one setup runs together on another.
+
+**Classic draws rows the way the game does.** The game never puts a filled bar behind text: its lists are text on the window art, and its gauges are thin strips. Filled bars over the art look out of place and make coloured names harder to read, so Classic shows each player's share as a thin gauge in their job colour under the name.
 
 **Skins only change the look.** Every skin fills the same palette, so the window is drawn by the same code in each. Classic reads its art and letters from your own install when it first needs them and falls back cleanly if it can't, so nothing from the game is shipped and a missing file never stops the meter.
 

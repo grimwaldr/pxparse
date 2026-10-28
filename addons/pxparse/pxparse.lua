@@ -1,6 +1,6 @@
 addon.name    = 'pxparse';
 addon.author  = 'Grimwald';
-addon.version   = '0.5.0';
+addon.version   = '0.5.1';
 addon.desc    = 'Damage parser for Phoenix XI.';
 addon.link    = 'https://github.com/grimwaldr/pxparse';
 

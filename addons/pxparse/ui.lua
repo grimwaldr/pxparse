@@ -529,7 +529,55 @@ end
 * drawn over it, with a 1px shadow so coloured names hold up on the fill. `outline` draws a border
 * (your own bar). The label is shortened to fit beside the figures. Returns clicked, hovered.
 --]]
+--[[
+* Classic's row: the game never puts a filled bar behind text, so the name and figures sit on the
+* window art like a line in one of its lists, with a thin gauge under them, shaded like the HP and
+* TP gauges, in the player's job colour. Your own row has a faint light band behind it.
+--]]
+local function gauge_row(id, width, fill, color, left, right, left_color, mine, right_dim)
+    local x, y    = ui.vec2(imgui.GetCursorScreenPos());
+    local line    = imgui.GetTextLineHeight();
+    local gauge   = math.max(3, math.floor(line * 0.25 + 0.5));
+    local height  = line + 2 + gauge;
+    local clicked = imgui.InvisibleButton(id, { width, height });
+    local hovered = imgui.IsItemHovered();
+    local list    = imgui.GetWindowDrawList();
+
+    if (mine or hovered) then
+        local band = hovered and { 1, 1, 1, 0.12 } or { 1, 1, 1, 0.07 };
+        list:AddRectFilled({ x - 3, y - 1 }, { x + width + 3, y + height + 1 }, imgui.GetColorU32(band), 2);
+    end
+
+    -- The gauge: a dark sunken track, the share filled in, lighter along its top edge.
+    fill = math.max(0, math.min(1, fill));
+    local gy = y + line + 2;
+    list:AddRectFilled({ x, gy }, { x + width, gy + gauge }, imgui.GetColorU32({ 0, 0, 0, 0.55 }));
+    if (fill > 0) then
+        local fx = x + math.max(width * fill, 2);
+        local c  = color;
+        list:AddRectFilled({ x, gy }, { fx, gy + gauge }, imgui.GetColorU32({ c[1] * 0.80, c[2] * 0.80, c[3] * 0.80, 1 }));
+        list:AddRectFilled({ x, gy }, { fx, gy + 1 }, imgui.GetColorU32({
+            c[1] + (1 - c[1]) * 0.45, c[2] + (1 - c[2]) * 0.45, c[3] + (1 - c[3]) * 0.45, 1 }));
+    end
+
+    local rx = x + width;
+    if (right_dim) then
+        rx = rx - ui.text_width(right_dim);
+        ui.draw_text(list, rx, y, COLOR.peach, right_dim);
+        rx = rx - ui.text_width('  ');
+    end
+    rx = rx - ui.text_width(right);
+    ui.draw_text(list, rx, y, COLOR.text, right);
+    ui.draw_text(list, x, y, left_color or COLOR.text, ui.fit(left, rx - x - 10));
+    return clicked, hovered;
+end
+
 function ui.meter_bar(id, width, height, fill, color, left, right, left_color, outline, left_outline, right_dim)
+    if (ui.theme.bars == 'gauge') then
+        -- The gauge takes the name's colour when it has one (job colours), else the bar colour.
+        local gauge_color = (left_color and left_color ~= COLOR.text and left_color ~= COLOR.peach) and left_color or color;
+        return gauge_row(id, width, fill, gauge_color, left, right, left_color, outline ~= nil, right_dim);
+    end
     local x, y    = ui.vec2(imgui.GetCursorScreenPos());
     local clicked = imgui.InvisibleButton(id, { width, height });
     local hovered = imgui.IsItemHovered();

@@ -428,8 +428,9 @@ local function draw_bars(ctx, width, scale, meter)
             if (not row.sc_row) then
                 left_color, left_outline = name_color(ctx, row.id);
             end
-            -- With job colours on your name isn't peach any more, so your bar gets an outline.
-            local outline = (deep and row.id == my_id) and COLOR.peach or nil;
+            -- With job colours on your name isn't peach any more, so your bar gets an outline
+            -- (Classic marks your row with a light band either way).
+            local outline = (row.id == my_id and (deep or ui.theme.bars == 'gauge')) and COLOR.peach or nil;
             local clicked, hovered = ui.meter_bar(('##pxp_bar_%s'):fmt(tostring(row.id)), width, h,
                 top > 0 and row.total / top or 0, color, left, fmt_number(row.total), left_color, outline,
                 left_outline, fmt_percent(row.share, 1));

@@ -124,6 +124,7 @@ local function classic(window_type)
         key = 'classic', name = 'Classic',
         skin = window_type,     -- skin.lua paints this type's art behind the window
         accent = false,         -- the art has its own frame
+        bars = 'gauge',         -- rows as the game draws lists: text on the art, a thin gauge under it
         window_rounding = 0, frame_rounding = 2, bar_rounding = 2, window_border = 0,
         padding = { 12, 12 },   -- clear of the frame art
         palette = {

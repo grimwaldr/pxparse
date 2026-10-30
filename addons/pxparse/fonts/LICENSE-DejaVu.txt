@@ -1,4 +1,4 @@
-DejaVu Sans Mono, drawn by pxparse from the atlases in this folder (baked by tools/bake_font.py).
+DejaVu Sans Mono, drawn by pxparse from the atlases in this folder (baked from the font's TTF).
 https://dejavu-fonts.github.io/
 
 Copyright (c) 2003 by Bitstream, Inc. All Rights Reserved. 

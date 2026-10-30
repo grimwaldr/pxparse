@@ -1,6 +1,6 @@
 --[[
 * pxparse - bitmapfont
-* Draws the bundled font (fonts/*.pxf, baked by tools/bake_font.py) as small textured squares, one
+* Draws the bundled font (fonts/*.pxf, baked ahead of time from the TTF) as small textured squares, one
 * per letter, the same way the game font is drawn. Nothing is loaded into ImGui's own fonts, which
 * can crash the game when an addon does it at runtime.
 *
@@ -124,7 +124,7 @@ local function as_dds(width, height, pixels)
     });
 end
 
--- Makes a texture from BGRA rows: { id, release }. Replaceable, so the preview can draw without D3D.
+-- Makes a texture from BGRA rows: { id, release }.
 function bitmapfont.make_texture(width, height, pixels)
     local ffi = require('ffi');
     local d3d = require('d3d8');

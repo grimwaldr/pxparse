@@ -9,7 +9,7 @@ addon.link    = 'https://github.com/grimwaldr/pxparse';
 * by fight, plus your experience or limit points per hour (0x02D). Read only: it never blocks, changes or sends a packet; /pxp report only types into
 * chat when you ask it to.
 *
-*   core/    decode, classify, parse, fights: plain Lua, tested offline (tests/run.lua)
+*   core/    decode, classify, parse, fights: plain Lua, no Ashita needed
 *   world    party, pets and names from Ashita's memory
 *   view     the window
 *   ui       drawing helpers in the active theme

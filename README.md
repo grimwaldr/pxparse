@@ -2,8 +2,6 @@
 
 A damage parser for Phoenix XI, an Ashita v4 addon. It counts what your party does, fight by fight, from the same packets the game uses to draw combat.
 
-![The meter during a fight](images/pxparse.png)
-
 ## Disclaimer
 
 pxparse is for tracking your own damage and improving your own play. It isn't a tool for harassing, bullying or putting down other players.
@@ -41,15 +39,13 @@ If the window is too narrow for everything (a wide font, a small scale), the foo
 
 ## Skins
 
-![The three skins, closed and on the Damage tab](images/skins.png)
-
 | Skin | Look |
 |---|---|
 | Phoenix | Dark red and ember. The starting skin. |
 | Classic | The game's own window art and font, with rows drawn like the game's lists: text on the window and a thin gauge underneath. |
 | Default | Plain ImGui. |
 
-Classic reads the window art from your own game install (`ROM/0/14.DAT` to `21.DAT`) and follows Config > Windows > Shared > Window Type as you change it, or you can pin one type in Settings or with `/pxp wintype`. The picture above shows Window Type 4.
+Classic reads the window art from your own game install (`ROM/0/14.DAT` to `21.DAT`) and follows Config > Windows > Shared > Window Type as you change it, or you can pin one type in Settings or with `/pxp wintype`.
 
 If the art can't be read, pxparse says so once in chat and carries on with plain colours. Nothing from the game ships with the addon.
 
@@ -141,22 +137,7 @@ addons/pxparse/
   core/parse.lua     adds it all up
   core/fights.lua    splits it into fights
   core/exp.lua       experience and limit points per hour, and the chain timer
-tests/               offline tests and the preview renderer
-tools/bake_font.py   bakes a TTF into the atlases in fonts/
-images/              screenshots for this README
 ```
-
-## Tests
-
-```
-pip install lupa
-python3 tests/run.py     # decoder, classifier, parser, fights and EXP
-python3 tests/smoke.py   # the whole addon against stubbed Ashita and ImGui
-```
-
-Or with LuaJIT: `luajit tests/run.lua`.
-
-`tests/preview.py` draws the real addon with real Dear ImGui, the version Ashita v4 uses, for a made-up party and fight, and saves a screenshot of each tab and skin. It needs `pip install lupa imgui-bundle PyOpenGL pillow` and a display (`xvfb-run -a python3 tests/preview.py` on a server). Text is DejaVu Sans Mono at 15px, a wide font, so anything that would run together in game runs together there too. Without a game install, Classic shows its fallbacks; `PREVIEW_BACKDROP` and `PREVIEW_FONT` stand in a screenshot of a game window and a font of your own (see the top of `preview.py`).
 
 ## Why it works this way
 
@@ -193,8 +174,6 @@ Or with LuaJIT: `luajit tests/run.lua`.
 **Fonts are drawn, not loaded.** Loading a font into ImGui from an addon while the game is running can crash it, and a crash inside the game can't be caught. So both extra fonts are drawn letter by letter as small textured squares: the game's from your install, DejaVu Mono from atlases baked ahead of time, one per size so the letters always land on whole pixels. Each atlas also has a copy with the dark ring baked in, so a ringed letter is still one square and a full Log tab stays well under what ImGui draws in one window.
 
 **Skins only change the look.** Every skin fills the same palette, so the window is drawn by the same code in each. Classic reads its art and letters from your own install when it first needs them and falls back cleanly if it can't, so nothing from the game is shipped and a missing file never stops the meter.
-
-**The core is testable on its own.** The parser has no dependence on the game client. The tests build packets the same way Phoenix's server packs them, so the decoder is checked against the server's format, not against its own assumptions.
 
 ## License
 

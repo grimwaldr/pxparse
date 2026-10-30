@@ -8,11 +8,11 @@ pxparse is for tracking your own damage and improving your own play. It isn't a 
 
 ## Install
 
-1. Copy the `addons/pxparse` folder into your Ashita `addons` folder, so you have `addons/pxparse/pxparse.lua`.
+1. Download this repo (Code > Download ZIP) and unzip it into your Ashita `addons` folder as a folder named `pxparse`, so you have `addons/pxparse/pxparse.lua`. Or clone it there: `git clone https://github.com/grimwaldr/pxparse addons/pxparse`.
 2. In game, type `/addon load pxparse`.
 3. To load it every time you play, add `/addon load pxparse` to your Ashita startup script.
 
-To update, replace the folder. Your settings are kept in `config/addons/pxparse`.
+To update, replace the folder (or `git pull` in it). Your settings are kept in `config/addons/pxparse`.
 
 ## Using the window
 
@@ -122,21 +122,20 @@ Turn on **Mob IDs** in the settings (or `/pxp ids`) to show every mob's ID, for 
 ## Files
 
 ```
-addons/pxparse/
-  pxparse.lua        events, commands, duplicate filter, window
-  world.lua          party, pets and names from Ashita's memory
-  view.lua           the tabs
-  ui.lua             drawing helpers in the active skin
-  themes.lua         Phoenix, Classic and Default
-  skin.lua           Classic's window art, from your game install
-  gamefont.lua       the game's font, from your game install
-  bitmapfont.lua     draws the shipped font from its atlases
-  fonts/             DejaVu Sans Mono atlases, one per size, and its licence
-  core/decode.lua    reads action packets (0x028) and battle messages (0x029, 0x02D)
-  core/classify.lua  what each result means
-  core/parse.lua     adds it all up
-  core/fights.lua    splits it into fights
-  core/exp.lua       experience and limit points per hour, and the chain timer
+pxparse.lua        events, commands, duplicate filter, window
+world.lua          party, pets and names from Ashita's memory
+view.lua           the tabs
+ui.lua             drawing helpers in the active skin
+themes.lua         Phoenix, Classic and Default
+skin.lua           Classic's window art, from your game install
+gamefont.lua       the game's font, from your game install
+bitmapfont.lua     draws the shipped font from its atlases
+fonts/             DejaVu Sans Mono atlases, one per size, and its licence
+core/decode.lua    reads action packets (0x028) and battle messages (0x029, 0x02D)
+core/classify.lua  what each result means
+core/parse.lua     adds it all up
+core/fights.lua    splits it into fights
+core/exp.lua       experience and limit points per hour, and the chain timer
 ```
 
 ## Why it works this way
@@ -177,4 +176,4 @@ addons/pxparse/
 
 ## License
 
-pxparse is free software under the [GNU General Public License v3.0](LICENSE). The DejaVu Sans Mono atlases in `fonts/` are drawn from DejaVu Sans Mono, under its own licence ([fonts/LICENSE-DejaVu.txt](addons/pxparse/fonts/LICENSE-DejaVu.txt)).
+pxparse is free software under the [GNU General Public License v3.0](LICENSE). The DejaVu Sans Mono atlases in `fonts/` are drawn from DejaVu Sans Mono, under its own licence ([fonts/LICENSE-DejaVu.txt](fonts/LICENSE-DejaVu.txt)).

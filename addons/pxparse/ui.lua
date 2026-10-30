@@ -3,9 +3,10 @@
 * Drawing helpers, in the active theme (themes.lua). ui.COLOR holds the theme's palette; switching
 * theme rewrites the colours in place, so every table that refers to them follows.
 *
-* All text goes through ui.text, ui.text_width and ui.draw_text. Under Classic they draw in the
-* game's own font (gamefont.lua) at UI scale 1, or the normal font ringed in dark at other sizes or
-* when the font can't be read, the way the game rings its text. Other themes draw as ImGui does.
+* All text goes through ui.text, ui.text_width and ui.draw_text, in the font picked for the skin:
+* Ashita's own, the game's (gamefont.lua, read from the install) or DejaVu Mono (bitmapfont.lua,
+* shipped in fonts/). The last two are drawn letter by letter as textured squares, never loaded
+* into ImGui. Classic rings every letter in dark, the way the game draws its text.
 --]]
 
 require('common');
@@ -14,7 +15,8 @@ local chat     = require('chat');
 local imgui    = require('imgui');
 local themes   = require('themes');
 local skin     = require('skin');
-local gamefont = require('gamefont');
+local gamefont   = require('gamefont');
+local bitmapfont = require('bitmapfont');
 
 local ui = {};
 
@@ -173,46 +175,87 @@ end
 -----------------------------------
 -- Text
 -----------------------------------
-ui.font_base = nil;    -- the font size before pxparse's scale, set each frame
-ui.game_font = true;   -- the setting for the active theme: draw in the game font
-local font_off = false; -- set if drawing in the game font ever fails
-local warned   = false;
+ui.font_base = nil;      -- the font size before pxparse's scale, set each frame
+ui.font      = 'ashita'; -- the setting for the active skin: 'ashita', 'game' or 'mono'
+local off    = {};       -- fonts that failed while drawing, off for the session
+local warned = {};
 
 local RING = { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 }, { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } };
+
+ui.FONTS      = { 'mono', 'game', 'ashita' };
+ui.FONT_NAMES = { mono = 'DejaVu Mono', game = 'Game', ashita = 'Ashita' };
 
 local function classic()
     return ui.theme ~= nil and ui.theme.skin ~= nil;
 end
 
--- Whether this text, here, is drawn in the game font: the setting on for this theme (by default only
--- Classic), plain ASCII, and at the font's own size (the game font is a bitmap; scaled or big text
--- uses the normal font, ringed under Classic).
-local function game_font(text)
-    if (font_off or not ui.game_font or not ui.font_base or not gamefont.plain(text)) then
-        return false;
+local function warn_once(font, text)
+    if (not warned[font]) then
+        warned[font] = true;
+        ui.say(text);
     end
-    if (math.abs(imgui.GetFontSize() - ui.font_base) > 0.01) then
-        return false;
+end
+
+-- The game's letters, read from the install: one size, ringed by the font itself.
+local GAME = {
+    width = function (text) return gamefont.width(text); end,
+    draw  = function (list, x, y, color, text)
+        gamefont.draw(list, x, y + (imgui.GetTextLineHeight() - gamefont.CELL) / 2, color, text);
+    end,
+};
+
+-- DejaVu Sans Mono, drawn from the atlases that ship in fonts/.
+local MONO = { f = nil };
+MONO.width = function (text) return bitmapfont.width(MONO.f, text); end;
+MONO.draw  = function (list, x, y, color, text, style)
+    bitmapfont.draw(list, MONO.f, x, y, color, text, imgui.GetTextLineHeight(), style);
+end;
+
+--[[
+* The font this text is drawn in when it isn't Ashita's own, or nil: the skin's setting, plain ASCII,
+* and for the game font, the font's own size (it's a bitmap; scaled or big text uses Ashita's font,
+* ringed under Classic). The bundled font has a size for every scale.
+--]]
+local function face(text)
+    local font = ui.font;
+    if (font == 'ashita' or off[font] or not ui.font_base or not gamefont.plain(text)) then
+        return nil;
     end
-    local ok, reason = gamefont.load();
-    if (not ok and not warned) then
-        warned = true;
-        ui.say(('Game font: %s. Using the normal font.'):fmt(tostring(reason)));
+    if (font == 'game') then
+        if (math.abs(imgui.GetFontSize() - ui.font_base) > 0.01) then
+            return nil;
+        end
+        local ok, reason = gamefont.load();
+        if (not ok) then
+            warn_once(font, ('Game font: %s. Using Ashita\'s font.'):fmt(tostring(reason)));
+            return nil;
+        end
+        return GAME;
     end
-    return ok == true;
+    if (font == 'mono') then
+        local f, reason = bitmapfont.get('dejavu-mono', imgui.GetFontSize());
+        if (not f) then
+            warn_once(font, ('DejaVu Mono: %s. Using Ashita\'s font.'):fmt(tostring(reason)));
+            return nil;
+        end
+        MONO.f = f;
+        return MONO;
+    end
+    return nil;
 end
 
 local function font_failed(problem)
-    if (not font_off) then
-        font_off = true;
-        ui.say(('Game font is off for this session: %s'):fmt(tostring(problem)));
+    if (not off[ui.font]) then
+        off[ui.font] = true;
+        ui.say(('%s font is off for this session: %s'):fmt(ui.FONT_NAMES[ui.font] or ui.font, tostring(problem)));
     end
 end
 
 function ui.text_width(text)
     text = tostring(text);
-    if (game_font(text)) then
-        return gamefont.width(text);
+    local f = face(text);
+    if (f) then
+        return f.width(text);
     end
     local width = imgui.CalcTextSize(text);
     if (type(width) ~= 'number') then
@@ -227,8 +270,10 @@ end
 --]]
 function ui.draw_text(list, x, y, color, text, outline, shadow)
     text = tostring(text);
-    if (game_font(text)) then
-        local ok, problem = pcall(gamefont.draw, list, x, y + (imgui.GetTextLineHeight() - gamefont.CELL) / 2, color, text);
+    local f = face(text);
+    if (f) then
+        local style = (classic() or outline) and 'ring' or (shadow and 'shadow' or nil);
+        local ok, problem = pcall(f.draw, list, x, y, color, text, style);
         if (ok) then
             return;
         end
@@ -254,7 +299,7 @@ end
 --]]
 function ui.text(color, text, framed)
     text = tostring(text);
-    if (not classic() and not game_font(text)) then
+    if (not classic() and not face(text)) then
         if (framed) then
             imgui.AlignTextToFramePadding();
         end
@@ -306,7 +351,7 @@ end
 
 -- Wraps at the window edge, so a long note doesn't stretch the auto-sized window.
 function ui.note(width, color, text)
-    if (not classic() and not game_font('A')) then
+    if (not classic() and not face('A')) then
         imgui.PushTextWrapPos(ui.PADDING + width);
         imgui.TextColored(color, text);
         imgui.PopTextWrapPos();
@@ -437,7 +482,7 @@ end
 -- `align` 0 puts the label at the left, 0.5 centres it.
 local function labelled_button(label, size, color, align)
     local text = tostring(label):match('^(.-)##') or tostring(label);
-    if (not classic() and not game_font(text)) then
+    if (not classic() and not face(text)) then
         return imgui.Button(label, size);
     end
     imgui.PushStyleColor(ImGuiCol_Text, COLOR.clear);
@@ -647,6 +692,7 @@ end
 function ui.release()
     pcall(skin.release);
     pcall(gamefont.release);
+    pcall(bitmapfont.release);
 end
 
 --[[
@@ -760,7 +806,7 @@ function ui.dot(color)
     local line   = imgui.GetTextLineHeight();
     local radius = math.max(2.5, line * 0.18);
     local cy     = y + line / 2;
-    if (not game_font('0')) then
+    if (not face('0')) then
         local baked = imgui.GetFontBaked();
         local g     = baked and baked:FindGlyph(0x30); -- '0': centre on the digits
         cy = g and (y + (g.Y0 + g.Y1) / 2) or cy;

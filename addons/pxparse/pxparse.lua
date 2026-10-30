@@ -1,6 +1,6 @@
 addon.name    = 'pxparse';
 addon.author  = 'Grimwald';
-addon.version   = '0.5.1';
+addon.version   = '0.5.2';
 addon.desc    = 'Damage parser for Phoenix XI.';
 addon.link    = 'https://github.com/grimwaldr/pxparse';
 
@@ -14,7 +14,8 @@ addon.link    = 'https://github.com/grimwaldr/pxparse';
 *   view     the window
 *   ui       drawing helpers in the active theme
 *   themes   Phoenix, Classic and Default
-*   skin, gamefont   Classic's window art and font, read from your game install
+*   skin, gamefont   Classic's window art and the game's font, read from your game install
+*   bitmapfont       DejaVu Mono, drawn from the atlases in fonts/
 --]]
 
 require('common');
@@ -51,7 +52,9 @@ local default_settings = T{
     theme     = 'phoenix', -- 'phoenix', 'classic' (the game's window art and font) or 'default'
     wintype   = -1,        -- Classic's Window Type, 0-7; -1 follows the game's setting
     -- Text in the game's own font, per theme: on for Classic, which is built from the game's UI.
-    gamefont  = T{ phoenix = false, classic = true, default = false },
+    -- The font per skin: 'mono' (DejaVu Mono, shipped with pxparse), 'game' (the game's own, read
+    -- from your install) or 'ashita' (Ashita's ImGui font).
+    font      = T{ phoenix = 'mono', classic = 'game', default = 'mono' },
 };
 
 local SC_MODES = { 'player', 'shared', 'bar', 'off' };
@@ -150,25 +153,52 @@ function ctx.cycle_wintype()
     settings.save();
 end
 
--- The game font setting for the theme in use. Settings saved before it was per theme held one
--- on/off for Classic.
+-- The font per skin. Settings from before 0.5.2 held a game font on/off per skin instead: on
+-- becomes the game font, off becomes Ashita's for Classic and DejaVu Mono for the others.
 local function font_settings()
-    local f = ctx.settings.gamefont;
-    if (type(f) ~= 'table') then
-        f = T{ phoenix = false, classic = f ~= false, default = false };
-        ctx.settings.gamefont = f;
+    local s = ctx.settings;
+    if (s.gamefont ~= nil) then
+        local old = s.gamefont;
+        local on  = function (key)
+            if (type(old) == 'table') then
+                return old[key] == true;
+            end
+            return key == 'classic' and old ~= false;
+        end
+        s.font = T{
+            phoenix = on('phoenix') and 'game' or 'mono',
+            classic = on('classic') and 'game' or 'ashita',
+            default = on('default') and 'game' or 'mono',
+        };
+        s.gamefont = nil;
+        settings.save();
     end
-    return f;
+    if (type(s.font) ~= 'table') then
+        s.font = T{ phoenix = 'mono', classic = 'game', default = 'mono' };
+    end
+    return s.font;
 end
 
-function ctx.game_font()
-    return font_settings()[ctx.settings.theme] == true;
+function ctx.font()
+    local f = font_settings()[ctx.settings.theme];
+    return ui.FONT_NAMES[f] and f or (ctx.settings.theme == 'classic' and 'game' or 'mono');
 end
 
-function ctx.toggle_gamefont()
-    local f = font_settings();
-    f[ctx.settings.theme] = not (f[ctx.settings.theme] == true);
+function ctx.set_font(name)
+    font_settings()[ctx.settings.theme] = name;
     settings.save();
+end
+
+-- DejaVu Mono, then the game's, then Ashita's.
+function ctx.cycle_font()
+    local now = ctx.font();
+    for i, name in ipairs(ui.FONTS) do
+        if (name == now) then
+            ctx.set_font(ui.FONTS[i % #ui.FONTS + 1]);
+            return;
+        end
+    end
+    ctx.set_font(ui.FONTS[1]);
 end
 
 -- Saves once the slider is let go, so scale doesn't resize the window mid-drag.
@@ -271,7 +301,7 @@ local function render()
     local scale = ctx.settings.scale;
     local width = ui.BASE_WIDTH * scale;
     ui.use_theme(ctx.settings.theme, ctx.settings.wintype);
-    ui.game_font = ctx.game_font();
+    ui.font = ctx.font();
     local colors, vars = ui.push_theme(ctx.settings.alpha);
 
     if (ctx.place_window) then
@@ -410,7 +440,7 @@ local function help()
     ui.say('/pxp scale <0.5-3> - window size');
     ui.say('/pxp theme [phoenix|classic|default] - the look; Classic uses the game\'s window art and font');
     ui.say('/pxp wintype [1-8|game] - Classic\'s window type, or follow the game\'s setting');
-    ui.say('/pxp font - text in the game\'s font for this theme (on for Classic), or the normal font');
+    ui.say('/pxp font [mono|game|ashita] - the font for this skin: DejaVu Mono, the game\'s, or Ashita\'s; alone, the next one');
     ui.say('/pxp export - save the parse as a CSV in config\\addons\\pxparse');
 end
 
@@ -506,9 +536,17 @@ ashita.events.register('command', 'pxparse_command', function (e)
         ui.say(ctx.settings.wintype < 0 and 'Classic follows the game\'s window type.'
             or ('Classic uses window Type %d.'):fmt(ctx.settings.wintype + 1));
     elseif (sub == 'font') then
-        ctx.toggle_gamefont();
-        ui.say(('%s: %s.'):fmt(themes.NAMES[ctx.settings.theme] or 'Theme',
-            ctx.game_font() and 'text in the game\'s font' or 'text in the normal font'));
+        local want = (args[3] or ''):lower();
+        local alias = { mono = 'mono', dejavu = 'mono', game = 'game', ffxi = 'game', ashita = 'ashita', agave = 'ashita' };
+        if (want == '') then
+            ctx.cycle_font();
+        elseif (alias[want]) then
+            ctx.set_font(alias[want]);
+        else
+            ui.warn('Usage: /pxp font [mono|game|ashita]');
+            return;
+        end
+        ui.say(('%s: %s font.'):fmt(themes.NAMES[ctx.settings.theme] or 'Skin', ui.FONT_NAMES[ctx.font()]));
     else
         help();
     end

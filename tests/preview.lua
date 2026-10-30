@@ -116,6 +116,14 @@ io.open = function (path, mode)
     return real_open(path, mode);
 end
 
+-- The bundled font's textures, made by the preview (OpenGL) instead of Direct3D.
+if (PREVIEW_TEXTURE) then
+    require('bitmapfont').make_texture = function (w, h, px)
+        local hex = px:gsub('.', function (c) return string.format('%02x', c:byte()); end);
+        return { id = PREVIEW_TEXTURE(w, h, hex), release = function () end };
+    end
+end
+
 dofile('addons/pxparse/pxparse.lua');
 SETTINGS.x, SETTINGS.y = 16, 16;
 

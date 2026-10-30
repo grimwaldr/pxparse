@@ -496,5 +496,43 @@ do
     check('0x02D message ignores the flag bit', m.message, 253);
 end
 
+-----------------------------------
+-- The bundled font's atlases
+-----------------------------------
+do
+    local bitmapfont = require('bitmapfont');
+    for _, size in ipairs(bitmapfont.SIZES) do
+        local file = io.open(('addons/pxparse/fonts/dejavu-mono-%d.pxf'):format(size), 'rb');
+        check(('font %d is there'):format(size), file ~= nil, true);
+        if (file) then
+            local f, why = bitmapfont.parse(file:read('*a'));
+            file:close();
+            check(('font %d parses'):format(size), why, nil);
+            if (f) then
+                local count = 0;
+                for _ in pairs(f.glyphs) do count = count + 1; end
+                check(('font %d has every printable letter'):format(size), count, 0x7E - 0x21 + 1);
+                check(('font %d alpha fills the atlas'):format(size), #f.alpha, f.width * f.height);
+                local g = f.glyphs[('M'):byte()];
+                check(('font %d letters inside the atlas'):format(size), g.x + g.w <= f.width and g.y + g.h <= f.height, true);
+            end
+        end
+    end
+    check('nearest size: exact', bitmapfont.nearest(15), 15);
+    check('nearest size: between', bitmapfont.nearest(19.4), 20);
+    check('nearest size: past the end', bitmapfont.nearest(50), 36);
+    check('not a font file', select(2, bitmapfont.parse('nope')), 'not a pxparse font file');
+
+    -- The ring sits outside the letter and never covers it.
+    local tiny = { width = 3, height = 3, alpha = { 0, 0, 0, 0, 255, 0, 0, 0, 0 } };
+    local px = bitmapfont.pixels(tiny, true);
+    check('ringed pixels: 4 bytes each', #px, 36);
+    check('the letter stays white', px:byte(17), 255);
+    check('the letter stays solid', px:byte(20), 255);
+    check('the ring is dark', px:byte(1), 0);
+    check('the ring is mostly opaque', px:byte(4), math.floor(255 * 0.9 + 0.5));
+    check('plain has no ring', bitmapfont.pixels(tiny, false):byte(4), 0);
+end
+
 print(('%d passed, %d failed'):format(passed, failed));
 return failed;

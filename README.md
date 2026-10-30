@@ -33,7 +33,7 @@ The window starts as just the meter: a bar per player with their damage and shar
 | Damage | The meter, plus Accuracy (Acc% melee, RAcc% ranged, crit rate and damage taken per player) and Experience (progress to your next level or merit point, points per hour, time to level, total gained and the chain timer) |
 | Detail | One player's damage, DPS, active DPS, kills, accuracy and skillchains (closed / opened), and their damage by source: melee, kicks, ranged attacks, weapon skills, spells, abilities, skillchains, pets, spikes and counters. Hover a source for max, min, accuracy, crits and magic bursts |
 | Log | The last 60 results, and any attack messages pxparse doesn't recognise yet |
-| Settings | Scale, opacity, skin, game font, lock, resets, party only, job colours, mob IDs and where skillchain damage goes |
+| Settings | Scale, opacity, skin, font, lock, resets, party only, job colours, mob IDs and where skillchain damage goes |
 
 **Chain timer:** "Chain #2 2:41" counts down the time left to keep your EXP chain going. It's green with over half the window left, gold under half, and orange in the last quarter. After a plain kill with no chain running it shows grey, because a chain only started if that mob was Even Match or tougher, and the game doesn't say which.
 
@@ -51,9 +51,19 @@ If the window is too narrow for everything (a wide font, a small scale), the foo
 
 Classic reads the window art from your own game install (`ROM/0/14.DAT` to `21.DAT`) and follows Config > Windows > Shared > Window Type as you change it, or you can pin one type in Settings or with `/pxp wintype`. The picture above shows Window Type 4.
 
-**Game font:** Classic draws text in the game's own letters, read from `ROM/119/51.DAT` (or another region's copy), each ringed in dark so it reads on every window type. It's on for Classic and off for the other skins; the Game font button in Settings (or `/pxp font`) turns it on or off for the skin you're using. The game font is a bitmap, so it's used at scale 1; at other scales Classic rings the normal font instead.
+If the art can't be read, pxparse says so once in chat and carries on with plain colours. Nothing from the game ships with the addon.
 
-If the art or font can't be read, pxparse says so once in chat and carries on with plain colours or the normal font. Nothing from the game ships with the addon.
+## Fonts
+
+Each skin has its own font, set with the Font button in Settings or `/pxp font`:
+
+| Font | What it is | Starts on |
+|---|---|---|
+| DejaVu Mono | DejaVu Sans Mono, shipped with pxparse in `fonts/`, at every scale | Phoenix, Default |
+| Game | The game's own letters, read from your install (`ROM/119/51.DAT` or another region's copy). It's a bitmap, so it's used at scale 1 | Classic |
+| Ashita | Ashita's own ImGui font | |
+
+Under Classic every letter is ringed in dark, the way the game draws its text, so it reads on every window type. If a font can't be used (the game font's file isn't found, or a scale it doesn't have), pxparse says so once in chat and uses Ashita's font for that text.
 
 ## How it reads damage
 
@@ -109,7 +119,7 @@ Turn on **Mob IDs** in the settings (or `/pxp ids`) to show every mob's ID, for 
 | `/pxp scale <0.5-3>` | Window size |
 | `/pxp theme [phoenix\|classic\|default]` | Switch skin. Alone, the next one |
 | `/pxp wintype [1-8\|game]` | Classic's window type, or follow the game's setting |
-| `/pxp font` | The game's font on or off for the skin in use |
+| `/pxp font [mono\|game\|ashita]` | The font for the skin in use. Alone, the next one |
 | `/pxp export` | Save the picked fight as a CSV in `config\addons\pxparse` |
 | `/pxp debug` | Print the job pxparse sees for you |
 
@@ -124,12 +134,15 @@ addons/pxparse/
   themes.lua         Phoenix, Classic and Default
   skin.lua           Classic's window art, from your game install
   gamefont.lua       the game's font, from your game install
+  bitmapfont.lua     draws the shipped font from its atlases
+  fonts/             DejaVu Sans Mono atlases, one per size, and its licence
   core/decode.lua    reads action packets (0x028) and battle messages (0x029, 0x02D)
   core/classify.lua  what each result means
   core/parse.lua     adds it all up
   core/fights.lua    splits it into fights
   core/exp.lua       experience and limit points per hour, and the chain timer
 tests/               offline tests and the preview renderer
+tools/bake_font.py   bakes a TTF into the atlases in fonts/
 images/              screenshots for this README
 ```
 
@@ -177,10 +190,12 @@ Or with LuaJIT: `luajit tests/run.lua`.
 
 **Classic draws rows the way the game does.** The game never puts a filled bar behind text: its lists are text on the window art, and its gauges are thin strips. Filled bars over the art look out of place and make coloured names harder to read, so Classic shows each player's share as a thin gauge in their job colour under the name.
 
+**Fonts are drawn, not loaded.** Loading a font into ImGui from an addon while the game is running can crash it, and a crash inside the game can't be caught. So both extra fonts are drawn letter by letter as small textured squares: the game's from your install, DejaVu Mono from atlases baked ahead of time, one per size so the letters always land on whole pixels. Each atlas also has a copy with the dark ring baked in, so a ringed letter is still one square and a full Log tab stays well under what ImGui draws in one window.
+
 **Skins only change the look.** Every skin fills the same palette, so the window is drawn by the same code in each. Classic reads its art and letters from your own install when it first needs them and falls back cleanly if it can't, so nothing from the game is shipped and a missing file never stops the meter.
 
 **The core is testable on its own.** The parser has no dependence on the game client. The tests build packets the same way Phoenix's server packs them, so the decoder is checked against the server's format, not against its own assumptions.
 
 ## License
 
-pxparse is free software under the [GNU General Public License v3.0](LICENSE).
+pxparse is free software under the [GNU General Public License v3.0](LICENSE). The DejaVu Sans Mono atlases in `fonts/` are drawn from DejaVu Sans Mono, under its own licence ([fonts/LICENSE-DejaVu.txt](addons/pxparse/fonts/LICENSE-DejaVu.txt)).

@@ -307,14 +307,20 @@ local function draw_settings(ctx, width)
     if (picked) then
         ctx.set_theme(themes.ORDER[picked]);
     end
-    -- The game's own letters, read from your install: on for Classic, and a toggle on any theme.
-    local game_font = ctx.game_font();
+    -- The font for this skin: DejaVu Mono, the game's, or Ashita's. Click for the next one.
+    local font_label = ('Font: %s'):fmt(ui.FONT_NAMES[ctx.font()]);
+    local font_tip = {
+        'Click for the next font, for this skin:',
+        'DejaVu Mono: shipped with pxparse, at every scale',
+        'Game: the game\'s own letters, read from your install (at scale 1)',
+        'Ashita: Ashita\'s own font',
+    };
     if (s.theme == 'classic') then
         local window = s.wintype >= 0 and ('Window: Type %d'):fmt(s.wintype + 1)
             or ('Window: game (Type %d)'):fmt((ui.theme.skin or 0) + 1);
-        picked = ui.button_row('pxp_classic', { 'Game font', window }, { game_font, s.wintype >= 0 }, width);
+        picked = ui.button_row('pxp_classic', { font_label, window }, { true, s.wintype >= 0 }, width);
         if (picked == 1) then
-            ctx.toggle_gamefont();
+            ctx.cycle_font();
         elseif (picked == 2) then
             ctx.cycle_wintype();
         end
@@ -325,14 +331,11 @@ local function draw_settings(ctx, width)
             }, COLOR.secondary);
         end
     else
-        if (ui.toggle_button('Game font##pxp_font', game_font, width)) then
-            ctx.toggle_gamefont();
+        if (ui.toggle_button(font_label .. '##pxp_font', true, width)) then
+            ctx.cycle_font();
         end
         if (imgui.IsItemHovered()) then
-            ui.tooltip({
-                'Text in the game\'s own font, read from your install',
-                '(used at scale 1). Classic has it on by default.',
-            }, COLOR.secondary);
+            ui.tooltip(font_tip, COLOR.secondary);
         end
     end
 

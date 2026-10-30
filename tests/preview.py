@@ -89,6 +89,10 @@ def build(lua):
         def AddTriangleFilled(self, p1, p2, p3, col):
             self.dl.add_triangle_filled(v(p1), v(p2), v(p3), col)
 
+        def AddImage(self, tex, p_min, p_max, uv0=None, uv1=None, col=0xFFFFFFFF):
+            self.dl.add_image(imgui.ImTextureRef(int(tex)), v(p_min), v(p_max),
+                              v(uv0) or imgui.ImVec2(0, 0), v(uv1) or imgui.ImVec2(1, 1), col)
+
         def AddLine(self, p1, p2, col, thickness=1.0):
             self.dl.add_line(v(p1), v(p2), col, thickness or 1.0)
 
@@ -243,6 +247,8 @@ SHOTS = [
     ("classic-art-closed", False, "damage", False, True, "classic"),
     ("classic-art-damage", True, "damage", False, True, "classic"),
     ("classic-art-detail", True, "detail", False, True, "classic"),
+    ("classic-art-mono-closed", False, "damage", False, True, "classic"),
+    ("closed-ashita", False, "damage", False, True, "phoenix"),
 ]
 
 # The game's window art can't be read here (it comes from the game install), so the classic-art
@@ -287,6 +293,21 @@ def shoot(name, expanded, tab, masked, live, theme):
     g.PREVIEW_IMGUI = module
     g.PREVIEW_CONST = const
     g.PREVIEW_LONG = name.startswith("long")
+
+    def texture(w, h, hexdata):
+        """The bundled font's atlas (BGRA rows from the addon) as an OpenGL texture."""
+        from OpenGL import GL
+        bgra = bytes.fromhex(hexdata)
+        rgba = bytearray(bgra)
+        rgba[0::4], rgba[2::4] = bgra[2::4], bgra[0::4]
+        tex = GL.glGenTextures(1)
+        GL.glBindTexture(GL.GL_TEXTURE_2D, tex)
+        GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST)
+        GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST)
+        GL.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, int(w), int(h), 0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, bytes(rgba))
+        return int(tex)
+
+    g.PREVIEW_TEXTURE = texture
     g.PREVIEW_ICONS = lua.table_from({
         "ICON_FA_GEAR": fa.ICON_FA_GEAR, "ICON_FA_EYE": fa.ICON_FA_EYE,
         "ICON_FA_EYE_SLASH": fa.ICON_FA_EYE_SLASH, "ICON_FA_CARET_DOWN": fa.ICON_FA_CARET_DOWN,
@@ -303,6 +324,10 @@ def shoot(name, expanded, tab, masked, live, theme):
         if not live:
             p.kill()
             p.advance(10)
+        # A font other than the skin's default: "-mono" or "-ashita" in the shot's name.
+        for font in ("mono", "ashita"):
+            if "-" + font in name:
+                s.font[theme] = font
         if name.startswith("classic-art"):
             s.wintype, s.alpha = WINTYPE, 0.0  # the backdrop shows through the window
         if name == "chain-late":

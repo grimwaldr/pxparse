@@ -316,17 +316,42 @@ assert(cmd('/pxp theme'), 'theme cycle');
 assert(LOADED.theme == 'phoenix', 'theme cycles back to phoenix');
 assert(cmd('/pxp wintype 3') and LOADED.wintype == 2, 'wintype 3');
 assert(cmd('/pxp wintype game') and LOADED.wintype == -1, 'wintype game');
--- The game font is per theme: on for Classic only, until turned on elsewhere.
-assert(LOADED.gamefont.classic == true and LOADED.gamefont.phoenix == false, 'game font defaults');
-assert(cmd('/pxp font') and LOADED.gamefont.phoenix == true, 'font on for phoenix');
-assert(LOADED.gamefont.classic == true, 'classic untouched');
-handlers.d3d_present(); -- phoenix with the game font asked for: falls back to the normal font here
-assert(cmd('/pxp theme classic') and cmd('/pxp font') and LOADED.gamefont.classic == false, 'font off for classic');
-assert(LOADED.gamefont.phoenix == true, 'phoenix untouched');
--- Settings saved before it was per theme held one on/off for Classic.
+-- The font is per skin: DejaVu Mono for Phoenix and Default, the game's for Classic.
+local bitmapfont = require('bitmapfont');
+local textures, images = 0, 0;
+bitmapfont.make_texture = function (w, h, px)
+    assert(#px == w * h * 4, 'atlas pixels the wrong size');
+    textures = textures + 1;
+    return { id = textures, release = function () end };
+end
+list.AddImage = function () images = images + 1; end
+bitmapfont.release(); -- forget the sizes that failed above, before textures could be made
+assert(LOADED.font.phoenix == 'mono' and LOADED.font.classic == 'game' and LOADED.font.default == 'mono', 'font defaults');
+for _, expanded in ipairs({ false, true }) do
+    view.expanded = expanded;
+    for _, tab in ipairs({ 'damage', 'detail', 'log', 'settings' }) do
+        LOADED.tab = tab;
+        handlers.d3d_present();
+    end
+end
+assert(textures >= 2 and images > 100, ('DejaVu Mono not drawn (%d textures, %d letters)'):format(textures, images));
+assert(cmd('/pxp font game') and LOADED.font.phoenix == 'game', 'font game for phoenix');
+assert(LOADED.font.classic == 'game' and LOADED.font.default == 'mono', 'other skins untouched');
+handlers.d3d_present(); -- the game font can't be read here: falls back to Ashita's font
+assert(cmd('/pxp font') and LOADED.font.phoenix == 'ashita', 'font cycles game -> ashita');
+assert(cmd('/pxp font') and LOADED.font.phoenix == 'mono', 'font cycles ashita -> mono');
+assert(cmd('/pxp font agave') and LOADED.font.phoenix == 'ashita', 'agave means ashita');
+assert(cmd('/pxp font nope') and LOADED.font.phoenix == 'ashita', 'bad font ignored');
+assert(cmd('/pxp theme classic') and cmd('/pxp font dejavu') and LOADED.font.classic == 'mono', 'mono for classic');
+handlers.d3d_present();
+-- Settings from before 0.5.2 held a game font on/off per skin.
+LOADED.gamefont = T{ phoenix = false, classic = false, default = true };
+handlers.d3d_present();
+assert(LOADED.gamefont == nil, 'old setting removed');
+assert(LOADED.font.classic == 'ashita' and LOADED.font.phoenix == 'mono' and LOADED.font.default == 'game', 'old setting moved over');
 LOADED.gamefont = false;
 handlers.d3d_present();
-assert(type(LOADED.gamefont) == 'table' and LOADED.gamefont.classic == false and LOADED.gamefont.phoenix == false, 'old setting moved over');
+assert(LOADED.font.classic == 'ashita', 'oldest setting (one on/off) moved over');
 assert(cmd('/pxp theme phoenix'));
 assert(cmd('/pxp theme nope'), 'bad theme still blocked');
 assert(LOADED.theme == 'phoenix', 'bad theme ignored');
